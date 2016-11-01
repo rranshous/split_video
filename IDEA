@@ -1,0 +1,36 @@
+
+
+we have some command we want run in parallel
+the command will read some data and produce some output data
+input data may be large
+
+have user provide path to data which is to be operated on
+and the docker image + command to use against the data
+
+use a data container for input and output
+have N worker containers which start and mount the
+data container using it for input and output
+(using most docker running clusters) this would limit the number of workers
+to the capacity of a single node in the cluster
+
+create a new image which uses the user provided image
+as the base and adds the data to it
+use that image for the workers
+workers all have access to the data locally, no single node limitation
+some other mechanism will need to be used to collect the output data
+could be an output data container
+
+baking the new image with the data and than using a data container
+to collect the output seems like a good idea. it allows horizontal scaling
+of the workers and still provides a single place to look for
+the output data
+
+
+what if the command needs to be different in each worker?
+
+ADDITION:
+
+you _can not_ commit the data in a container's data volume
+using the file_receiver and keeping the data in the /data dir
+directly. was going to use the resulting image (after commit) as
+source of data container

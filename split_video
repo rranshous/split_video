@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -e
+set -x
+
+docker_user="rranshous"
+data_container_image="rranshous/file_receiver"
+#data_container_image="ubuntu:14.04"
+worker_image="rranshous/ffmpeg"
+data_file_path=$1
+data_file_abs_path=$(readlink -f $data_file_path)
+data_dir=$(dirname $data_file_abs_path)
+data_file=$(basename $data_file_abs_path)
+data_file_encoded=$(echo "$data_file" | base64)
+new_image_name="$docker_user/data-image-split-$(echo "%(data_file)" | md5sum | cut -d' ' -f1)"
+
+# create a data container 
+
+echo "setting up data container image"
+
+echo "pulling data container image"
+docker pull $data_container_image
+
+echo "starting data container"
+dcid=$(docker run -d $data_container_image)
+
+echo "mounting client container"
+ccid=$(docker run -d --volumes-from=$dcid -v "$data_dir:/input_data" "ubuntu:14.04" sleep 360) #hack  # .eject/poop <------
+
+echo "copying data to the container: $ccid"
+#docker cp "$data_file_path" "$dcid:/data/$data_file_encoded"
+docker exec $ccid cp "/input_data/$data_file" "/data/$data_file_encoded"
+
+echo "creating new image as as $new_image_name"
+docker commit -m "added $data_file to /data" $dcid "$new_image_name"
+
+#echo "stopping container"
+#docker stop $dcid
+
+#echo "stopping and removing temp container $dcid"
+#docker rm $dcid
+
+#echo "uploading container to repository"
+#docker push "$new_image_name"
